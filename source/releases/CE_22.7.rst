@@ -1,0 +1,715 @@
+===========================================================================================
+22.7  "Powerful Panther" Series
+===========================================================================================
+
+
+
+For more than 7 and a half years now, PFWsense is driving innovation through
+modularising and hardening the open source firewall, with simple
+and reliable firmware upgrades, multi-language support, fast adoption
+of upstream software updates as well as clear and stable 2-Clause BSD
+licensing.
+
+22.7, nicknamed "Powerful Panther", features the upgrade to FreeBSD 13.1,
+PHP 8.0, Phalcon 5, stacked VLAN and Intel QuickAssist (QAT) support,
+DDoS protection using SYN cookies, MVC/API pages for IPsec status and
+Unbound overrides, new APCUPSD and CrowdSec plugins plus much more.
+
+LibreSSL flavour is scheduled for removal at the end of this series
+and will likely receive no further maintenance.  Software failing to
+work properly starting with Tor will have its plugin removed from the
+flavour from now on to be able to keep updating the software to their
+latest versions in the OpenSSL flavour.  The next major upgrade will
+automatically transition to the OpenSSL flavour, but we would encourage
+everyone to switch between 22.7.x for the least amount of possible impact.
+
+Download links, an installation guide `[1] <https://docs.pfwsense.org/manual/install.html>`__  and the checksums for the images
+can be found below as well.
+
+* Europe: https://pfwsense.c0urier.net/releases/22.7/
+* US East Coast: https://mirror.wdc1.us.leaseweb.net/pfwsense/releases/22.7/
+* US West Coast: https://mirror.sfo12.us.leaseweb.net/pfwsense/releases/22.7/
+* South America: http://mirror.ueb.edu.ec/pfwsense/releases/22.7/
+* East Asia: https://mirror.ntct.edu.tw/pfwsense/releases/22.7/
+* Full mirror list: https://pfwsense.org/download/
+
+
+--------------------------------------------------------------------------
+22.7.6 (October 12, 2022)
+--------------------------------------------------------------------------
+
+
+This update fixes CRL code handling with third party software and sandboxes
+the code to avoid dealing with boot-time issues ever again.  However, due to
+the nature of the sandboxing no automatic fix can be made for the following
+case:
+
+Creating and using an empty CRL in OpenVPN broke in 22.7.5 due to an ancient
+bug not populating the empty CRL in binary format: the side effect "correcting"
+this at runtime was removed.  22.7.6 will now correctly populate the binary
+format of the empty CRL upon creation in the config.xml as originally intended.
+
+The options to manually fix existing empty CRLs are as follows:
+
+* Remove the CRL from OpenVPN as it is unused anyway, or
+* Add a dummy certificate to it to populate the CRL properly, or
+* Add and remove a random existing certificate to populate an empty CRL.
+
+These fixes can be carried out on older installation without a problem as well
+prior to upgrading to avoid OpenVPN from not working post-upgrade.
+
+Here are the full patch notes:
+
+* system: fix inconsistent is_crl_internal() implementation
+* system: make sure we always generate a CRL when saved
+* system: sandbox code handling CRL manipulation in the CRL manager page
+* system: wrap global product information handling into a singleton
+* system: move get_nameservers() to ifctl use
+* reporting: traffic graph polling interval selection and UX tweaks
+* interfaces: port 6RD/6to4 to ifctl use
+* interfaces: optionally use reverse DNS resolution for ARP table hostnames (contributed by soif)
+* interfaces: allow user-configurable VLAN device names with certain restrictions `[1] <https://github.com/pfwsense/core/issues/6038>`__ 
+* interfaces: small cleanup on get_real_interface()
+* firewall: simplify port forward rule logic for delete and toggle and make sure to toggle firewall rule as well
+* firewall: various performance and usability improvements in live log
+* firewall: extend all firewall rules with a UUID to align with MVC code upon edit
+* firmware: display license validity when applicable in business edition
+* ipsec: ACL fix for sessions users
+* unbound: support setting type value for DNS over TLS/Query Forwarding API (contributed by kulikov-a)
+* unbound: convert advanced settings to MVC/API
+* mvc: remove "clear all", "copy" and "paste" options when only a single entry is allowed
+* mvc: fix typo in searchRecordsetBase()
+* ports: isc-dhcp 4.4.3P1 `[2] <https://downloads.isc.org/isc/dhcp/4.4.3-P1/dhcp-4.4.3-P1-RELNOTES>`__ 
+* ports: phalcon 5.0.3 `[3] <https://github.com/phalcon/cphalcon/releases/tag/v5.0.3>`__ 
+* ports: php 8.0.24 `[4] <https://www.php.net/ChangeLog-8.php#8.0.24>`__ 
+* ports: squid no-forgery patch fix
+* ports: strongswan 5.9.8 `[5] <https://github.com/strongswan/strongswan/releases/tag/5.9.8>`__ 
+
+
+
+--------------------------------------------------------------------------
+22.7.5 (October 05, 2022)
+--------------------------------------------------------------------------
+
+
+Today we are fixing a security issue involving the "installer" user and
+kernel-based TCP panics that some have been fighting with since FreeBSD 13.
+Some ports and plugins have also been updated now that the holiday season
+is coming to its inevitable end.
+
+The security issue arises on fresh 22.7 installs only due to a boot-time
+optimization of user account handling since 22.1.8.  Users are not reset
+on each boot anymore which improved boot times with many users but also made
+the "installer" user stick with the default password in this situation.
+Physical access to the console with this user was possible under these
+conditions even after installation and updates were completed.  SSH access
+was also possible when both not restricting login to keys and allowing root
+login manually.  The mandatory reboot after the update to 22.7.5 or higher
+remedies this problem.
+
+In a default install the issue could only be exploited by manual console
+access.  In general we want to advise users not to yield shell/console
+access to non-administrators, restrict physical access if applicable, and
+not offer SSH access based on user accounts, especially when SSH is accessible
+from the WAN side without a VPN.
+
+In any case we recommend all users of 22.7.x to update immediately or
+take the necessary precautions to avoid the "installer" user from being
+accessed in an unauthorized fashion.
+
+Here are the full patch notes:
+
+* system: remove stray installer account from fresh 22.7 installations
+* system: only use withPadding() for RSA based public keys in CRL code
+* system: remove unnecessary crl_update() calls in CRL code
+* system: extend pool options support in gateway groups
+* system: move get_searchdomains() to ifctl use and allow FQDN
+* system: add replacement hook for rc.resolv_conf_generate script
+* system: replace "dns reload" backend call with portable alternative
+* system: remove obsolete rc.resolv_conf_generate script
+* system: bring back the buttons action in OpenVPN dashboard widget (contributed by kulikov-a)
+* system: assorted cleanups for IXR library used for XMLRPC
+* system: catch errors in RSS dashboard widget
+* system: stop reading product info from global $g variable in system information dashboard widget
+* system: structurally improve boot sequence with regard to hosts/resolv.conf generation
+* system: add keyUsage extension and follow RFC on basicConstraints in CA config (contributed by kulikov-a)
+* interfaces: migrate wireless creation to legacy_interface_listget()
+* firewall: support TOS/DSCP matching in firewall rules
+* firewall: add os-firewall alias paths in getAliasSource() to prevent removal when being used
+* firewall: get lockout interface from get_primary_interface_from_list()
+* firewall: fix PHP 8 error in port forwarding page
+* firewall: fix PHP 8 error in aliases (contributed by kulikov-a)
+* firewall: parse pftop internal data conversion (contributed by kulikov-a)
+* firmware: pfwsense-update: return subscription key via -K if it exists
+* ipsec: allow to set rightca in mobile phase 1 with EAP-TLS
+* ipsec: fix multiple phase 2 IP addresses on the same interface (contributed by Wagner Sartori Junior)
+* unbound: account for hostname during PTR creation
+* unbound: maintain a consistent dnsbl cache state
+* unbound: reduce blocklist read timeout (contributed by kulikov-a)
+* web proxy: update pattern to zst for the Arch packages (contributed by gacekjk)
+* plugins: os-crowdsec 1.0.1 `[1] <https://github.com/pfwsense/plugins/blob/stable/22.7/security/crowdsec/pkg-descr>`__ 
+* plugins: os-ddclient 1.9 `[2] <https://github.com/pfwsense/plugins/blob/stable/22.7/dns/ddclient/pkg-descr>`__ 
+* plugins: os-freeradius 1.9.21 `[3] <https://github.com/pfwsense/plugins/blob/stable/22.7/net/freeradius/pkg-descr>`__ 
+* plugins: os-nginx 1.30 `[4] <https://github.com/pfwsense/plugins/blob/stable/22.7/www/nginx/pkg-descr>`__ 
+* src: ifconfig: print interface name on SIOCIFCREATE2 error
+* src: igc: do not start in promiscuous mode by default
+* src: tcp: correctly compute the retransmit length for all 64-bit platforms
+* src: tcp: fix cwnd restricted SACK retransmission loop
+* src: tcp: fix computation of offset
+* src: tcp: send ACKs when requested
+* ports: dnsmasq 2.87 `[5] <https://www.thekelleys.org.uk/dnsmasq/CHANGELOG>`__ 
+* ports: expat 2.4.9 `[6] <https://github.com/libexpat/libexpat/blob/R_2_4_9/expat/Changes>`__ 
+* ports: lighttpd 1.4.67 `[7] <https://www.lighttpd.net/2022/9/17/1.4.67/>`__ 
+* ports: nss 3.83 `[8] <https://firefox-source-docs.mozilla.org/security/nss/releases/nss_3_83.html>`__ 
+* ports: phalcon 5.0.2 `[9] <https://github.com/phalcon/cphalcon/releases/tag/v5.0.2>`__ 
+* ports: php 8.0.23 `[10] <https://www.php.net/ChangeLog-8.php#8.0.23>`__ 
+* ports: phpseclib 3.0.16 `[11] <https://github.com/phpseclib/phpseclib/releases/tag/3.0.16>`__ 
+* ports: python 3.9.14 `[12] <https://docs.python.org/release/3.9.14/whatsnew/changelog.html>`__ 
+* ports: sqlite 3.39.3 `[13] <https://sqlite.org/releaselog/3_39_3.html>`__ 
+* ports: squid 5.7 `[14] <http://www.squid-cache.org/Versions/v5/squid-5.7-RELEASENOTES.html>`__ 
+* ports: suricata 6.0.8 `[15] <https://suricata.io/2022/09/27/suricata-6-0-7-released/>`__ 
+* ports: unbound 1.16.3 `[16] <https://nlnetlabs.nl/projects/unbound/download/#unbound-1-16-3>`__ 
+
+
+--------------------------------------------------------------------------
+22.7.4 (September 07, 2022)
+--------------------------------------------------------------------------
+
+
+This update addresses more issues with the somewhat unfortunate phpseclib 3
+migration.  WAN IPv6 SLAAC mode now works more reliably and TLS 1.3 web GUI
+configurations will enforce the expectations by software clients regarding
+interoperability.
+
+Last but not least the "assign VLAN parent and enable" migration note from
+22.1 is no longer required as the boot will attempt to configure all existing
+hardware devices once with the selected defaults.
+
+Here are the full patch notes:
+
+* system: enforce RFC 8446 by requiring TLS_AES_128_GCM_SHA256 for TLS 1.3
+* system: consider CRL end dates after 2050 as "lifetime" in GeneralizedTime format
+* system: revert the default CRL hashing back to what it was in phpseclib 2
+* system: match TLS cipher suites and commands in web GUI settings (contributed by kulikov-a)
+* system: improve error message of CRL validation failure (contributed by kulikov-a)
+* system: fix phpseclib 3 use for CSR parsing on certificates page
+* system: add the default "-c" option to backend pluginctl invokes for consistency
+* system: rework console port assignment regarding wireless handling
+* interfaces: configure all hardware features for present devices
+* interfaces: bring up IPv6 device manually since SLAAC will not do that automatically
+* interfaces: merge DHCPv4 / DHCPv6 buttons on overview page (contributed by Maurice Walker)
+* interfaces: add support for requesting DNS info via stateless DHCPv6 (contributed by Maurice Walker)
+* dnsmasq: restart during "newwanip" event
+* ports: curl 7.85.0 `[1] <https://curl.se/changes.html#7_85_0>`__ 
+* ports: libxml 2.10.2 `[2] <http://www.xmlsoft.org/news.html>`__ 
+* ports: sqlite 3.39.2 `[3] <https://sqlite.org/releaselog/3_39_2.html>`__ 
+* ports: syslog-ng 3.38.1 `[4] <https://github.com/syslog-ng/syslog-ng/releases/tag/syslog-ng-3.38.1>`__ 
+
+
+
+--------------------------------------------------------------------------
+22.7.3 (September 01, 2022)
+--------------------------------------------------------------------------
+
+
+Pick up the new FreeBSD security advisories while also introducing assorted
+reliability improvements.  CRL now works again for elliptic curve with the
+adoption of version 3 of phpseclib.  Wireless handling was improved due to
+PHP 8 errors and coding style issues.  It is also the subject of further work
+for 23.1.
+
+Here are the full patch notes:
+
+* system: migrate CRL handling to phpseclib 3
+* system: run monitor reload inside system_routing_configure()
+* system: fix IPv6 link-local HTTP_REFERER check (contributed by Maurice Walker)
+* system: fix assorted PHP 8 warnings in the codebase
+* system: extend nameservers script return for debugging purposes, i.e. "configctl system list nameservers debug"
+* system: lighttpd obsoletion of server listing directive, disabled by default
+* system: decode stored CRL data before display (contributed by kulikov-a)
+* interfaces: update link-local matching pattern
+* interfaces: PPP is an exception, only created after interface configuration
+* interfaces: only remove known primary addresses in interface_bring_down()
+* interfaces: improve shell banner address return in prefix-only IPv6 case
+* interfaces: improve problematic <wireless/> node handling
+* interfaces: DHCP does not signal RELEASE
+* interfaces: web GUI locale sorts files differently when invoking ifctl
+* interfaces: improve legacy_interface_listget()
+* interfaces: only parse actual options in legacy_interfaces_details(), not nd6 options
+* firewall: implement a router file read fallback for new ifctl :slaac suffix
+* firewall: stick-address only in effect with pool option and multiple routers
+* firewall: remove dead pptpd server code
+* captive portal: lighttpd deprecation of legacy SSL options, disabled by default
+* dhcp: allow rapid-commit message exchange in IPv6 server (contributed by Maurice Walker)
+* firmware: major upgrade "pkgs" set was still unknown to plugin sync
+* intrusion detection: fix enable rule button and present active detail overwrite if present
+* ipsec: fixed widget link (contributed by Patrik Kernstock)
+* unbound: improve FQDN handling when address is moving in DHCP watcher
+* unbound: prevent DNS rebinding check and DNSSEC validation on explicit forwarded domains
+* unbound: restrict creation of PTR records for both the system domain and host overrides
+* unbound: add AAAA-only mode (contributed by Maurice Walker)
+* lang: fix syntax errors in French translation (contributed by kulikov-a)
+* ui: fix type cast issue in Bootgrid
+* plugins: os-ddclient relaxes validation of description field
+* plugins: os-frr 1.30 `[1] <https://github.com/pfwsense/plugins/blob/stable/22.7/net/frr/pkg-descr>`__ 
+* plugins: os-nginx now uses simplified NAME_setup service handling
+* plugins: os-wireguard 1.12 `[2] <https://github.com/pfwsense/plugins/blob/stable/22.7/net/wireguard/pkg-descr>`__ 
+* plugins: os-zabbix-agent 1.13 `[3] <https://github.com/pfwsense/plugins/blob/stable/22.7/net-mgmt/zabbix-agent/pkg-descr>`__ 
+* plugins: os-zabbix-proxy 1.9 `[4] <https://github.com/pfwsense/plugins/blob/stable/22.7/net-mgmt/zabbix-proxy/pkg-descr>`__ 
+* src: rc: improve NAME_setup integration
+* src: zlib: fix a bug when getting a gzip header extra field with inflate() `[5] <FREEBSD:FreeBSD-SA-22:13.zlib>`__ 
+* src: tzdata: import tzdata 2022b and 2022c `[6] <FREEBSD:FreeBSD-EN-22:20.tzdata>`__ 
+* ports: ldns 1.8.3 `[7] <https://raw.githubusercontent.com/NLnetLabs/ldns/1.8.3/Changelog>`__ 
+* ports: liblz4 1.9.4
+* ports: libxml 2.10.1 `[8] <http://www.xmlsoft.org/news.html>`__ 
+* ports: nss 3.82 `[9] <https://firefox-source-docs.mozilla.org/security/nss/releases/nss_3_82.html>`__ 
+* ports: phpseclib 3.0.14 `[10] <https://github.com/phpseclib/phpseclib/releases/tag/3.0.14>`__ 
+
+A hotfix release was issued as 22.7.3_2:
+
+* system: work around phpseclib 3 flagging RSA-PSS as an invalid key alogrithm
+* system: check for existing X509 class before doing CRL update
+
+
+
+--------------------------------------------------------------------------
+22.7.2 (August 17, 2022)
+--------------------------------------------------------------------------
+
+
+This update comes a little earlier than expected due to FreeBSD security
+advisories.  Of special interest is the new firewall alias BGP ASN type
+and notices system which can also be implemented from plugins in the future.
+
+Here are the full patch notes:
+
+* system: replace static notices system with a shared one based on MVC/API code
+* system: use new _setup script feature where setup.sh exists
+* system: PHP 8 issue when ldap_get_entries() returns false
+* system: wrong variable in scope addition on manual DNS server via link-local gateway
+* system: "passwordarea" support for sensitive backup values
+* interfaces: fix wireless clone assignment regression in 22.7.1
+* interfaces: update ifctl utility to latest version
+* firewall: add BGP ASN type to aliases `[1] <https://docs.pfwsense.org/manual/aliases.html#bgp-asn>`__ 
+* dhcp: extend search list pull from DHCPv6 in router advertisements DNS option
+* dhcp: improve UI for disabling DNS part of router advertisements (contributed by Patrick M. Hausen)
+* dhcp: pushed wrong server to zone definition on local DNS selection
+* firmware: pfwsense-patch: only remove ".sh" suffix for installer and update repos
+* firmware: pfwsense-update: only set packages marker after successful upgrade
+* firmware: pfwsense-bootstrap: set correct packages marker
+* firmware: revoke 22.1 fingerprint
+* plugins: os-radsecproxy is no longer available on LibreSSL due to upstream build issues
+* plugins: os-acme-client 3.13 `[2] <https://github.com/pfwsense/plugins/blob/stable/22.7/security/acme-client/pkg-descr>`__ 
+* plugins: os-bind 1.24 `[3] <https://github.com/pfwsense/plugins/blob/stable/22.7/dns/bind/pkg-descr>`__ 
+* plugins: os-haproxy 3.11 `[4] <https://github.com/pfwsense/plugins/blob/stable/22.7/net/haproxy/pkg-descr>`__ 
+* plugins: os-git-backup hides SSH keys by default
+* plugins: os-postfix disables GSSAPI for the time being `[5] <https://github.com/pfwsense/plugins/blob/stable/22.7/mail/postfix/pkg-descr>`__ 
+* src: lib9p: Remove potential buffer overwrite in l9p_puqids() `[6] <FREEBSD:FreeBSD-SA-22:12.lib9p>`__ 
+* src: vm_fault: Shoot down shared mappings in vm_fault_copy_entry() `[7] <FREEBSD:FreeBSD-SA-22:11.vm>`__ 
+* src: elf_note_prpsinfo: handle more failures from proc_getargv() `[8] <FREEBSD:FreeBSD-SA-22:09.elf>`__ 
+* src: pam_exec: fix segfault when authtok is null `[9] <FREEBSD:FreeBSD-EN-22:19.pam_exec>`__ 
+* src: kevent: Fix an off-by-one in filt_timerexpire_l() `[10] <FREEBSD:FreeBSD-EN-22:16.kqueue>`__ 
+* src: cam: leep periph_links when restoring CCB in camperiphdone() `[11] <FREEBSD:FreeBSD-EN-22:17.cam>`__ 
+* src: pfctl: fix FOM_ICMP/POM_STICKYADDRESS clash
+* src: restrict default /root permissions to 750
+* src: rc: add ${name}_setup script support
+* ports: lighttpd 1.4.66 `[12] <https://www.lighttpd.net/2022/8/7/1.4.66/>`__ 
+* ports: phalcon 5.0.0RC4 `[13] <https://github.com/phalcon/cphalcon/releases/tag/v5.0.0RC4>`__ 
+* ports: php 8.0.22 `[14] <https://www.php.net/ChangeLog-8.php#8.0.22>`__ 
+
+
+
+--------------------------------------------------------------------------
+22.7.1 (August 09, 2022)
+--------------------------------------------------------------------------
+
+
+This update first and foremost addresses reported regressions with the
+initial version and the required security update for Unbound.  Expect
+follow-up releases to be a bit more noisy as we are going to introduce
+the new notification system and further IPv6 improvements plus new roadmap
+items to be announced in the upcoming weeks.
+
+Here are the full patch notes:
+
+* system: fix regression in config backup due to timestamp key rename
+* system: fix assorted warnings generated by PHP 8
+* system: do not reload Unbound/Dnsmasq hosts configuration by default
+* system: use proper CRL id-ce-cRLReasons extension keyword 'unspecified'
+* system: properly cleanse user input in Monit dashboard widget
+* system: remove dead code from login form
+* interfaces: fix get_interface_mac() not returning a cached MAC address
+* interfaces: hide nonexistent MAC info on wireless edit page
+* interfaces: stop DHCP from calling rc.newwanip when no changes are being done
+* interfaces: bring routes back unconditionally after reconfiguring 6to4/6rd IPv6 connectivity
+* interfaces: GIF/GRE IPv6 default remote network size selection is now "128" instead of "64"
+* dhcp: do not advertise DNS domain when DNS router advertisements are disabled (contributed by Patrick M. Hausen)
+* unbound: do not start DHCP watcher immediately after daemonizing Unbound itself
+* lang: fix reported issues with Italian and French translations
+* plugins: os-acme-client 3.12 `[1] <https://github.com/pfwsense/plugins/blob/stable/22.7/security/acme-client/pkg-descr>`__ 
+* plugins: os-freeradius 1.9.20 `[2] <https://github.com/pfwsense/plugins/blob/stable/22.7/net/freeradius/pkg-descr>`__ 
+* plugins: os-git-backup fixes git binary variable use
+* plugins: os-haproxy fixes deprecation notes in PHP 8 (contributed by Gavin Chappell)
+* plugins: os-maltrail 1.9 `[3] <https://github.com/pfwsense/plugins/blob/stable/22.7/security/maltrail/pkg-descr>`__ 
+* plugins: os-munin-node 1.1 `[4] <https://github.com/pfwsense/plugins/blob/stable/22.7/sysutils/munin-node/pkg-descr>`__ 
+* plugins: os-netdata 1.2 `[5] <https://github.com/pfwsense/plugins/blob/stable/22.7/net-mgmt/netdata/pkg-descr>`__ 
+* plugins: os-nginx 1.29 `[6] <https://github.com/pfwsense/plugins/blob/stable/22.7/www/nginx/pkg-descr>`__ 
+* ports: libxml 2.9.14 `[7] <http://www.xmlsoft.org/news.html>`__ 
+* ports: nss 3.81 `[8] <https://firefox-source-docs.mozilla.org/security/nss/releases/nss_3_81.html>`__ 
+* ports: rrdtool 1.8.0 `[9] <https://github.com/oetiker/rrdtool-1.x/blob/master/CHANGES>`__ 
+* ports: unbound 1.16.2 `[10] <https://nlnetlabs.nl/projects/unbound/download/#unbound-1-6-2>`__ 
+
+
+
+--------------------------------------------------------------------------
+22.7 (July 28, 2022)
+--------------------------------------------------------------------------
+
+
+For more than 7 and a half years now, PFWsense is driving innovation through
+modularising and hardening the open source firewall, with simple
+and reliable firmware upgrades, multi-language support, fast adoption
+of upstream software updates as well as clear and stable 2-Clause BSD
+licensing.
+
+22.7, nicknamed "Powerful Panther", features the upgrade to FreeBSD 13.1,
+PHP 8.0, Phalcon 5, stacked VLAN and Intel QuickAssist (QAT) support,
+DDoS protection using SYN cookies, MVC/API pages for IPsec status and
+Unbound overrides, new APCUPSD and CrowdSec plugins plus much more.
+
+LibreSSL flavour is scheduled for removal at the end of this series
+and will likely receive no further maintenance.  Software failing to
+work properly starting with Tor will have its plugin removed from the
+flavour from now on to be able to keep updating the software to their
+latest versions in the OpenSSL flavour.  The next major upgrade will
+automatically transition to the OpenSSL flavour, but we would encourage
+everyone to switch between 22.7.x for the least amount of possible impact.
+
+Download links, an installation guide `[1] <https://docs.pfwsense.org/manual/install.html>`__  and the checksums for the images
+can be found below as well.
+
+* Europe: https://pfwsense.c0urier.net/releases/22.7/
+* US East Coast: https://mirror.wdc1.us.leaseweb.net/pfwsense/releases/22.7/
+* US West Coast: https://mirror.sfo12.us.leaseweb.net/pfwsense/releases/22.7/
+* South America: http://mirror.ueb.edu.ec/pfwsense/releases/22.7/
+* East Asia: https://mirror.ntct.edu.tw/pfwsense/releases/22.7/
+* Full mirror list: https://pfwsense.org/download/
+
+Here are the full patch notes against 22.1.10:
+
+* system: changed certificate revocation to use the phpseclib library
+* system: performance improvement for set_single_sysctl()
+* system: restart syslog fully and only once after all services have been started
+* system: new setting for deployment mode to control PHP error flow
+* system: /tmp MFS now uses a maximum of 50% of RAM by default and can be adjusted
+* system: /var MFS becomes /var/log MFS and uses a maximum of 50% of RAM by default and can be adjusted
+* system: previous special /var MFS content is now permanently stored under /var to ensure full operability
+* system: flush all core Python pyc files on updates
+* system: protect syslog-ng against out of memory kills
+* system: add filter to system log widget (contributed by kulikov-a)
+* system: disable RRD and NetFlow shutdown backups by default
+* system: render interfaces in convert_config()
+* system: apply default firewall policy before interface configuration
+* system: move remote backup script to proper file system location
+* system: disable flag was not removing static route
+* system: Net_IPv6::compress() should not compress "::" to ""
+* system: fix RADIUS config validation for port requirement (contributed by Josh Soref)
+* system: remove last bits of circular logging (CLOG) support
+* system: removed legacy Diffie-Hellman parameter handling
+* interfaces: refactored LAGG, wireless and static ARP handling
+* interfaces: provide automatic startup of Loopback, IPsec, OpenVPN, VXLAN devices
+* interfaces: removed the side effect reliance on /var/run/booting file
+* interfaces: add dynamic reload of required devices
+* interfaces: add WPA enterprise configuration for infrastructure mode (contributed by Manuel Faux)
+* interfaces: fix "Allow service binding" for multiple aliases per interface (contributed by Adam Dawidowski)
+* interfaces: auto-detect far gateway requirement for default route
+* interfaces: switch to MVC/API variant for DNS lookup page
+* interfaces: refactor DHCP and PPPoE scripts to use ifctl exclusively
+* interfaces: prevent the removal of default routes in dhclient-script
+* interfaces: fix inconsistencies in wireless handling
+* interfaces: fix unable to bring up multiple loopback (contributed Johnny S. Lee)
+* interfaces: fix unable to bring up multiple VXLAN
+* interfaces: check if int before passing to convert_seconds_to_hms()
+* interfaces: disable IPv6 inside 4in6 and 4in4 GIF tunnels (contributed by Maurice Walker)
+* interfaces: ping diagnostics tool must explicitly set IP version (contributed by Maurice Walker)
+* interfaces: remove other inconsistencies regarding ping utility changes in FreeBSD 13
+* interfaces: correct regex validation for dhcp6c expire statement (contributed by Josh Soref)
+* interfaces: add missing scope to link-local GIF host route
+* interfaces: add iwlwiwi(4) to wireless devices
+* firewall: improved port alias performance
+* firewall: obsoleted notices inside the synchronization code
+* firewall: support logging in NPT rules
+* firewall: append missing link-local to inet6 :network selector
+* firewall: move inspect action into its own async API action to prevent long page loads
+* firewall: internal aliases cannot be disabled
+* firewall: performance improvement for reading live log
+* firewall: ignore age/expire when not provided or empty in sessions page
+* firewall: add general firewall log for alias and filter system log messages
+* dhcp: no longer automatically add a link-local address to bridges if IPv6 service is running on it
+* dhcp: allow running relay service on bridges
+* dhcp: clean up IPv6 prefixes script
+* dhcp: include ddns-hostname and other cleanups (contributed by Sascha Buxhofer)
+* dhcp: remove duplicated ddnsupdate static mapping switch
+* dhcp: remove print_content_box() use
+* dhcp: switch to shell-based DHCPv6 lease watcher
+* dhcp: rewrite prefix merge for dynamic IPv6 tracking to support bitwise selection
+* dnsmasq: switch to a Python-based DHCP lease watcher
+* firmware: console script can now show changelog using "less" before update
+* firmware: disable crash reporter in development deployment mode
+* firmware: limit changelog-based update check on dashboard to release version
+* firmware: provide an upgrade log audit
+* intrusion detection: remove dead link to McAfee rule references
+* ipsec: add "IPv4+6" protocol for mobile phase 1 entries (contributed by vnxme)
+* ipsec: mobile property boolean duplication in phase 2
+* ipsec: remember phase 1 setting for next action
+* ipsec: switch to MVC/API variants of SPD, SAD and connection pages
+* ipsec: small UX tweaks in status page
+* openvpn: pinned Diffie-Hellman parameter to RFC 7919 4096 bit key
+* unbound: prevent crash of DHCP lease watcher due to unhandled CalledProcessError exception
+* lang: bring back Italian and update all languages to latest available translations
+* mvc: bugfix search and sort issues for searchRecordsetBase()
+* mvc: add support for non-persistent (memory) models
+* mvc: throw when no mount found in model (contributed by agh1467)
+* mvc: fix rowCount when all is selected in searchRecordsetBase()
+* mvc: fix two regressions in BaseField for Phalcon 5
+* mvc: store configuration changes only when actual changes exist
+* ui: removed Internet Explorer support
+* ui: boostrap-select ignored header height
+* ui: merge option objects instead of replacing them in bootgrid (contributed by agh1467)
+* ui: correct required API for command-info in bootgrid (contributed by agh1467)
+* ui: add catch undefined TypeError in SimpleActionButton (contributed by agh1467)
+* ui: fix assorted typos in the code base (contributed by Josh Soref)
+* ui: handle HTTP 500 error gracefully in MVC pages
+* plugins: os-apcupsd 1.0 `[2] <https://github.com/pfwsense/plugins/blob/stable/22.7/sysutils/apcupsd/pkg-descr>`__  (contributed by David Berry, Dan Lundqvist and Nicola Pellegrini)
+* plugins: os-boot-delay is no longer available `[3] <https://github.com/pfwsense/plugins/blob/b31bcb92106/sysutils/boot-delay/Makefile#L6>`__ 
+* plugins: os-crowdsec 1.0 `[4] <https://github.com/pfwsense/plugins/blob/stable/22.7/security/crowdsec/pkg-descr>`__ 
+* plugins: os-nginx fix for missing DH parameter file
+* plugins: os-postfix fix for missing DH parameter file
+* plugins: os-tayga 1.2 `[5] <https://github.com/pfwsense/plugins/blob/stable/22.7/net/tayga/pkg-descr>`__ 
+* plugins: os-tor no longer available on LibreSSL due to incompatibilities with newer Tor versions
+* plugins: os-web-proxy-useracl is no longer available, no updates since 2017
+* src: FreeBSD 13.1-RELEASE `[6] <https://www.freebsd.org/releases/13.1R/relnotes/>`__ 
+* src: axgbe: also validate configuration register in GPIO expander
+* src: pf: ensure that pfiio_name is always nul terminated
+* src: pf: make sure that pfi_update_status() always zeros counters
+* src: igc: change default duplex setting
+* src: e1000: try auto-negotiation for fixed 100 or 10 configuration
+* ports: php 8.0.20 `[7] <https://www.php.net/ChangeLog-8.php#8.0.20>`__ 
+* ports: sqlite 3.39.0 `[8] <https://sqlite.org/releaselog/3_39_0.html>`__ 
+* ports: suricata 6.0.6 `[9] <https://redmine.openinfosecfoundation.org/versions/176>`__ 
+* ports: unbound 1.16.1 `[10] <https://nlnetlabs.nl/projects/unbound/download/#unbound-1-16-1>`__ 
+
+A hotfix release was issued as 22.7_4:
+
+* system: IXR_Library using incorrect constructor format for PHP 8
+* interfaces: fix issues with PPP uptime display in PHP 8
+* firewall: do not emit link-local address on IPv6 network outbound NAT
+* mvc: remove stray error_reporting(E_ALL) calls
+
+Known issues and limitations:
+
+* The DH parameter is no longer available in OpenVPN server configuration and now fixed to the RFC 7919 4096 bit key.  The only downside may be lower performance on older machines.
+* The infamous /var MFS feature was reduced to the /var/log scope in order to avoid future issues with plugins requiring persistent storage under /var.  In practice people who used /var MFS had no benefit over it with software that required persistent storage under /var to operate in the first place.  Periodic configuration file writes to /var are negligible on SSD-based systems.
+* The os-dyndns plugin is still available due to the fact that ddclient did not release a non-development release so far since we started os-ddclient.  Availability thereof might change later in 22.7.x.
+* The console firmware update will now display text-based changelogs for the update to be installed if available.  Use the arrow keys to scroll the changelog and type "q" to resume the update process.
+* The manual DHCPv6 tracking mode now requires a proper prefix range given like its counterpart with a static address.  If a previous prefix ID type input is detected only setting the lower 64 bits of an IPv6 address, a warning is emitted and the ID is treated as the upper 64 bits of an IPv6 address instead.  If your DHCPv6 server does not start please properly fix the given range.
+
+The public key for the 22.7 series is:
+
+.. code-block::
+
+    # -----BEGIN PUBLIC KEY-----
+    # MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAs9U1NFG2420gDDQO97iU
+    # S72sRdCaYCMoY2K8PpjrPGOkgDFN79YB+BYyUDZiO6aHJvy07yuDwhJcTiMWzuyF
+    # Ub6BqdB2ehjP0+/Sh2z9eOWecI6s7rDxJVwaZRSagA3f5pDYj2LKtAqIPnv3Avs1
+    # GTSHUZPR+V09UzUq/j0gRCNA+5hJrRwbyebaUGcp8QetUirmewAU5ArfXIBXvhn9
+    # L9i8+r0/M/QbueSA7mOA4v2BDZVMAo1X72O6GZmpt+SY6A2fA9uvgYU/19hlCJQY
+    # 6eL16U4TG2Z1tyR6TIsjGZ973UDAFdZqDO4nqPeW/Dm20fnY/X6ZJcU1McbeDftZ
+    # 10lquuZBrFgxVDB6zBYX5319p1ASeYnSdhvFlK02P8a6OJS6JWmCx5j1VRAU8Zh1
+    # W5xZRJJi6HmbX2b1ef2cy3ijtT/jviSNXEPR9V2otz9B+lc0g8P/hPwd7hpmdYj0
+    # +KYcPaa1kmR4/xf++hb5XbOLt2Wc4mbyBph4VPeXiLYUfYlpYNwfvuP56zdylk+p
+    # Mzw3XM1M36vA9oMXM9hLrrG67/UH6s4td//w4zdFPQ+A/rlVeF8EHsHICi6Salki
+    # Z+R9FCNM61wU9HdAPOSpDn1aPQdW3HPNVmeI0iHPg42jIT1n1T0720XgHRTfntyh
+    # E2+jioeukrqqEg1fzmszseMCAwEAAQ==
+    # -----END PUBLIC KEY-----
+
+
+
+.. code-block::
+
+    # SHA256 (PFWsense-22.7-OpenSSL-dvd-amd64.iso.bz2) = 9345057e993cd55dfa5280beefd33f1dc2243681defff3c5f11b84fa2c7910f8
+    # SHA256 (PFWsense-22.7-OpenSSL-nano-amd64.img.bz2) = 061ea4ca261bcd8397ae1a4acf2fb32f0fbbb6ac00d617e1f4151318f66cc77d
+    # SHA256 (PFWsense-22.7-OpenSSL-serial-amd64.img.bz2) = cf1603e20d4268d917b40344ddadd2f147c3e167dbe1f6cd254a2afcb586fb4d
+    # SHA256 (PFWsense-22.7-OpenSSL-vga-amd64.img.bz2) = 2537f37247d98e27634c34cdf23f30f95d0ed00ac0af01c2d9675580a790f8fb
+
+--------------------------------------------------------------------------
+22.7.r2 (July 20, 2022)
+--------------------------------------------------------------------------
+
+
+Quick update on the release candidate series with assorted improvements.
+
+All relevant tickets have been closed and roadmap items completed.
+There are no visible blockers for 22.7 next week at the moment so we
+will still be targeting July 28 as the release date.
+
+Here are the full patch notes:
+
+* system: apply default firewall policy before interface configuration
+* system: move remote backup script to proper file system location
+* system: remove support for displaying legacy logs in the GUI
+* system: disable flag was not removing static route
+* system: Net_IPv6::compress() should not compress "::" to ""
+* system: fix RADIUS config validation for port requirement (contributed by Josh Soref)
+* interfaces: disable IPv6 inside 4in6 and 4in4 GIF tunnels (contributed by Maurice Walker)
+* interfaces: ping diagnostics tool must explicitly set IP version (contributed by Maurice Walker)
+* interfaces: remove other inconsistencies regarding ping utility changes in FreeBSD 13
+* interfaces: correct regex validation for dhcp6c expire statement (contributed by Josh Soref)
+* interfaces: add missing scope to link-local GIF host route
+* dhcp: remove print_content_box() use
+* dnsmasq: switch to a Python-based DHCP lease watcher
+* firmware: limit changelog-based update check on dashboard to release version
+* firmware: provide an upgrade log audit
+* intrusion detection: remove dead link to McAfee rule references
+* unbound: prevent crash of DHCP lease watcher due to unhandled CalledProcessError exception
+* mvc: fix two regressions in BaseField for Phalcon 5
+* mvc: store configuration changes only when actual changes exist
+* ui: fix assorted typos in the code base (contributed by Josh Soref)
+* ui: handle HTTP 500 error gracefully in MVC pages
+
+
+Stay safe,
+Your PFWsense team
+
+--------------------------------------------------------------------------
+22.7.r1 (July 13, 2022)
+--------------------------------------------------------------------------
+
+
+For more than 7 and a half years now, PFWsense is driving innovation through
+modularising and hardening the open source firewall, with simple
+and reliable firmware upgrades, multi-language support, fast adoption
+of upstream software updates as well as clear and stable 2-Clause BSD
+licensing.
+
+We thank all of you for helping test, shape and contribute to the project!
+We know it would not be the same without you.  <3
+
+Download links, an installation guide `[1] <https://docs.pfwsense.org/manual/install.html>`__  and the checksums for the images
+can be found below as well.
+
+* Europe: https://pfwsense.c0urier.net/releases/22.7/
+* US East Coast: https://mirror.wdc1.us.leaseweb.net/pfwsense/releases/22.7/
+* US West Coast: https://mirror.sfo12.us.leaseweb.net/pfwsense/releases/22.7/
+* South America: http://mirror.ueb.edu.ec/pfwsense/releases/22.7/
+* East Asia: https://mirror.ntct.edu.tw/pfwsense/releases/22.7/
+* Full mirror list: https://pfwsense.org/download/
+
+Here are the full patch notes against 22.1.10:
+
+* system: removed legacy Diffie-Hellman parameter handling
+* system: changed certificate revocation to use the phpseclib library
+* system: performance improvement for set_single_sysctl()
+* system: restart syslog fully and only once after all services have been started
+* system: new setting for deployment mode to control PHP error flow
+* system: /tmp MFS now uses a maximum of 50% of RAM by default and can be adjusted
+* system: /var MFS becomes /var/log MFS and uses a maximum of 50% of RAM by default and can be adjusted
+* system: previous special /var MFS content is now permanently stored under /var to ensure full operability
+* system: flush all core Python pyc files on updates
+* system: protect syslog-ng against out of memory kills
+* system: add filter to system log widget (contributed by kulikov-a)
+* interfaces: refactored LAGG, wireless and static ARP handling
+* interfaces: provide automatic startup of Loopback, IPsec, OpenVPN, VXLAN devices
+* interfaces: removed the side effect reliance on /var/run/booting file
+* interfaces: add dynamic reload of required devices
+* interfaces: add WPA enterprise configuration for infrastructure mode (contributed by Manuel Faux)
+* interfaces: fix "Allow service binding" for multiple aliases per interface (contributed by Adam Dawidowski)
+* interfaces: auto-detect far gateway requirement for default route
+* interfaces: switch to MVC/API variant for DNS lookup page
+* interfaces: refactor DHCP and PPPoE scripts to use ifctl exclusively
+* interfaces: prevent the removal of default routes in dhclient-script
+* interfaces: fix inconsistencies in wireless handling
+* firewall: improved port alias performance
+* firewall: obsoleted notices inside the synchronization code
+* firewall: support logging in NPT rules
+* firewall: append missing link-local to inet6 :network selector
+* firewall: move inspect action into its own async API action to prevent long page loads
+* firewall: internal aliases cannot be disabled
+* firewall: performance improvement for reading live log
+* dhcp: no longer automatically add a link-local address to bridges if IPv6 service is running on it
+* dhcp: allow running relay service on bridges
+* dhcp: clean up IPv6 prefixes script
+* dhcp: include ddns-hostname and other cleanups (contributed by Sascha Buxhofer)
+* dhcp: remove duplicated ddnsupdate static mapping switch
+* firmware: added 22.7 series fingerprint
+* firmware: console script can now show changelog using "less" before update
+* firmware: disable crash reporter in development and debug deployments
+* ipsec: add "IPv4+6" protocol for mobile phase 1 entries (contributed by vnxme)
+* ipsec: mobile property boolean duplication in phase 2
+* ipsec: remember phase 1 setting for next action
+* ipsec: switch to MVC/API variants of SPD, SAD and connection pages
+* openvpn: pinned Diffie-Hellman parameter to RFC 7919 4096 bit key
+* lang: bring back Italian and update all languages to latest available translations
+* mvc: bugfix search and sort issues for searchRecordsetBase()
+* mvc: add support for non-persistent (memory) models
+* mvc: throw when no mount found in model (contributed by agh1467)
+* ui: removed Internet Explorer support
+* ui: boostrap-select ignored header height
+* ui: merge option objects instead of replacing them in bootgrid (contributed by agh1467)
+* ui: correct required API for command-info in bootgrid (contributed by agh1467)
+* ui: add catch undefined TypeError in SimpleActionButton (contributed by agh1467)
+* plugins: os-apcupsd 1.0 `[2] <https://github.com/pfwsense/plugins/blob/stable/22.7/sysutils/apcupsd/pkg-descr>`__  (contributed by David Berry, Dan Lundqvist and Nicola Pellegrini)
+* plugins: os-boot-delay is no longer available `[3] <https://github.com/pfwsense/plugins/blob/b31bcb92106/sysutils/boot-delay/Makefile#L6>`__ 
+* plugins: os-tayga 1.2 `[4] <https://github.com/pfwsense/plugins/blob/stable/22.7/net/tayga/pkg-descr>`__ 
+* plugins: os-tor no longer available on LibreSSL due to incompatibilities with newer Tor versions
+* plugins: os-web-proxy-useracl is no longer available, no updates since 2017
+* src: FreeBSD 13.1-RELEASE `[5] <https://www.freebsd.org/releases/13.1R/relnotes/>`__ 
+* ports: sqlite 3.39.0 `[6] <https://sqlite.org/releaselog/3_39_0.html>`__ 
+* ports: php 8.0.20 `[7] <https://www.php.net/ChangeLog-8.php#8.0.20>`__ 
+
+A hotfix release was issued as 22.7.r1_8:
+
+* system: disable RRD and NetFlow shutdown backups by default
+* system: render interfaces in convert_config()
+* interfaces: fix unable to bring up multiple loopback (contributed Johnny S. Lee)
+* interfaces: fix unable to bring up multiple VXLAN
+* interfaces: check if int before passing to convert_seconds_to_hms()
+* ipsec: small UX tweaks in status page
+* mvc: fix rowCount when all is selected in searchRecordsetBase()
+* plugins: os-nginx fix for missing DH parameter file
+* plugins: os-postfix fix for missing DH parameter file
+
+Known issues and limitations:
+
+* The DH parameter is no longer available in OpenVPN server configuration and now fixed to the RFC 7919 4096 bit key.  The only downside may be lower performance on older machines.
+* The infamous /var MFS feature was reduced to the /var/log scope in order to avoid future issues with plugins requiring persistent storage under /var.  In practice people who used /var MFS had no benefit over it with software that required persistent storage under /var to operate in the first place.  Periodic configuration file writes to /var are negligible on SSD-based systems.
+
+The public key for the 22.7 series is:
+
+.. code-block::
+
+    # -----BEGIN PUBLIC KEY-----
+    # MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAs9U1NFG2420gDDQO97iU
+    # S72sRdCaYCMoY2K8PpjrPGOkgDFN79YB+BYyUDZiO6aHJvy07yuDwhJcTiMWzuyF
+    # Ub6BqdB2ehjP0+/Sh2z9eOWecI6s7rDxJVwaZRSagA3f5pDYj2LKtAqIPnv3Avs1
+    # GTSHUZPR+V09UzUq/j0gRCNA+5hJrRwbyebaUGcp8QetUirmewAU5ArfXIBXvhn9
+    # L9i8+r0/M/QbueSA7mOA4v2BDZVMAo1X72O6GZmpt+SY6A2fA9uvgYU/19hlCJQY
+    # 6eL16U4TG2Z1tyR6TIsjGZ973UDAFdZqDO4nqPeW/Dm20fnY/X6ZJcU1McbeDftZ
+    # 10lquuZBrFgxVDB6zBYX5319p1ASeYnSdhvFlK02P8a6OJS6JWmCx5j1VRAU8Zh1
+    # W5xZRJJi6HmbX2b1ef2cy3ijtT/jviSNXEPR9V2otz9B+lc0g8P/hPwd7hpmdYj0
+    # +KYcPaa1kmR4/xf++hb5XbOLt2Wc4mbyBph4VPeXiLYUfYlpYNwfvuP56zdylk+p
+    # Mzw3XM1M36vA9oMXM9hLrrG67/UH6s4td//w4zdFPQ+A/rlVeF8EHsHICi6Salki
+    # Z+R9FCNM61wU9HdAPOSpDn1aPQdW3HPNVmeI0iHPg42jIT1n1T0720XgHRTfntyh
+    # E2+jioeukrqqEg1fzmszseMCAwEAAQ==
+    # -----END PUBLIC KEY-----
+
+Please let us know about your experience!
+
+
+
+.. code-block::
+
+    # SHA256 (PFWsense-22.7.r1-OpenSSL-dvd-amd64.iso.bz2) = 4c4a58de86b112e62721d53667e21745b85e4d6ba696ec0f52ab7bf7edcb21e4
+    # SHA256 (PFWsense-22.7.r1-OpenSSL-nano-amd64.img.bz2) = 325fd29d4ca191b6dd90845e4ddfeb96fff2ebcc03b2b675ac656660e8d58b0d
+    # SHA256 (PFWsense-22.7.r1-OpenSSL-serial-amd64.img.bz2) = d5adb1425e6d49386513f241fd6375ff466b65da01dc4142bc32dd58732c90a0
+    # SHA256 (PFWsense-22.7.r1-OpenSSL-vga-amd64.img.bz2) = ca846e3c53696ebe4a94364e45f5a358091b8493ea982690568eb16212dc0f75
